@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - API</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background-color: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .container h2 { margin-bottom: 20px; color: #333; }
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; color: #666; font-size: 14px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 10px; background-color: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn:hover { background-color: #0056b3; }
+        .btn-secondary { background-color: #28a745; margin-top: 10px; }
+        .btn-secondary:hover { background-color: #218838; }
+        #message { margin-top: 15px; font-size: 14px; }
+        .error { color: red; }
+        .success { color: green; }
+        
+        #panel { display: none; }
+        .logout { background-color: #dc3545; }
+        .logout:hover { background-color: #c82333; }
+    </style>
+</head>
+<body>
+
+<!-- Formulario de Login -->
+<div class="container" id="login-container">
+    <h2>Iniciar Sesión</h2>
+    <form id="login-form">
+        <div class="form-group">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <button type="submit" class="btn">Entrar</button>
+    </form>
+    <button class="btn btn-secondary" onclick="toggleRegister()">Ir a Registro</button>
+    <p id="message"></p>
+</div>
+
+<!-- Formulario de Registro -->
+<div class="container" id="register-container" style="display: none;">
+    <h2>Crear Cuenta</h2>
+    <form id="register-form">
+        <div class="form-group">
+            <label for="reg-username">Usuario</label>
+            <input type="text" id="reg-username" required>
+        </div>
+        <div class="form-group">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" required>
+        </div>
+        <div class="form-group">
+            <label for="reg-password">Contraseña</label>
+            <input type="password" id="reg-password" required>
+        </div>
+        <button type="submit" class="btn btn-secondary">Registrar</button>
+    </form>
+    <button class="btn" onclick="toggleRegister()">Volver al Login</button>
+    <p id="reg-message"></p>
+</div>
+
+<!-- Panel de Usuario Autenticado -->
+<div class="container" id="panel">
+    <h2 id="welcome-message"></h2>
+    <p>¡Has iniciado sesión correctamente en el backend!</p>
+    <button class="btn logout" onclick="logout()">Cerrar Sesión</button>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:8080/api/users';
+
+    function toggleRegister() {
+        const login = document.getElementById('login-container');
+        const register = document.getElementById('register-container');
+        if (login.style.display === 'none') {
+            login.style.display = 'block';
+            register.style.display = 'none';
+        } else {
+            login.style.display = 'none';
+            register.style.display = 'block';
+        }
+        document.getElementById('message').innerText = '';
+        document.getElementById('reg-message').innerText = '';
+    }
+
+    // Login
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const msgEl = document.getElementById('message');
+
+        try {
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                msgEl.innerText = 'Login exitoso!';
+                msgEl.className = 'success';
+                
+                // Mostrar panel
+                document.getElementById('login-container').style.display = 'none';
+                document.getElementById('panel').style.display = 'block';
+                document.getElementById('welcome-message').innerText = `Hola, ${data.user.username}`;
+            } else {
+                msgEl.innerText = data.error || 'Credenciales incorrectas';
+                msgEl.className = 'error';
+            }
+        } catch (error) {
+            msgEl.innerText = 'Error al conectar con la API';
+            msgEl.className = 'error';
+        }
+    });
+
+    // Register
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('reg-username').value;
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const msgEl = document.getElementById('reg-message');
+
+        try {
+            const response = await fetch(`${API_URL}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            const data = await response.json();
+            
+            if (response.ok) {
+                msgEl.innerText = 'Registro exitoso! Ya puedes iniciar sesión.';
+                msgEl.className = 'success';
+                document.getElementById('register-form').reset();
+            } else {
+                // Parse errors validation
+                if (data.campos) {
+                    msgEl.innerText = Object.values(data.campos).join(', ');
+                } else {
+                    msgEl.innerText = data.error || 'Error al registrar';
+                }
+                msgEl.className = 'error';
+            }
+        } catch (error) {
+            msgEl.innerText = 'Error al conectar con la API';
+            msgEl.className = 'error';
+        }
+    });
+
+    // Logout
+    function logout() {
+        document.getElementById('panel').style.display = 'none';
+        document.getElementById('login-container').style.display = 'block';
+        document.getElementById('login-form').reset();
+        document.getElementById('message').innerText = '';
+    }
+</script>
+
+</body>
+</html>
